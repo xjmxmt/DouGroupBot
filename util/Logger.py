@@ -9,8 +9,9 @@ class Logger:
         # Todo: log rotate
         now = datetime.datetime.now()
         log_file = str(now.strftime("%Y-%m-%d")) + ".log"
-        if not os.path.exists(log_file):
-            open(log_file, "a+", encoding='utf-8')
+        file_path = os.path.join('logs', log_file)
+        if not os.path.exists(file_path):
+            open(file_path, "a+", encoding='utf-8')
         self.logger = logging.getLogger(log_file)
         self.logger.setLevel(logging.DEBUG)
         fmt = logging.Formatter('[%(asctime)s] [%(levelname)s] {%(module)s:%(lineno)d} %(message)s', '%m-%d %H:%M:%S')

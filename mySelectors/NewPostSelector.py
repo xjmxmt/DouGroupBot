@@ -2,7 +2,8 @@ from lxml import etree
 import time
 import requests
 
-from queue import SimpleQueue
+from multiprocessing import SimpleQueue
+from queue import Queue
 
 
 class NewPostSelector:
@@ -10,10 +11,10 @@ class NewPostSelector:
         self.q = queue
         self.s = session
         self.histo = set()
-        self.loadHistoFromFile()
+        # self.loadHistoFromFile()
 
     def select(self):
-        groupUrl = 'https://www.douban.com/group/groupID/'
+        groupUrl = 'https://www.douban.com/group/697689/'
         time.sleep(5)
         items = self.getItems(groupUrl)
         self.putItems(items)
@@ -23,7 +24,7 @@ class NewPostSelector:
     def getItems(self, url):
         xpExp = "//table[@class='olt']/tr"
         r = self.s.get(url)
-        items = self.parseHtml(r, xpExp)
+        items = self.parseHtml(r, xpExp)  # 可以获取到帖子的标题、url、回复数、发帖人uid
         return items
 
     def putItems(self, items):
@@ -32,22 +33,22 @@ class NewPostSelector:
             # tup = i.get('title'), i.get('href')
             title = tup[0]
 
-            cnt = tup[2]
+            cnt = tup[2]  # 回复数
             try:
                 href = tup[1].split('/')[5]
-                if cnt > 20 or href in self.histo:
+                if cnt > 0 or href in self.histo:
                     continue
                 length += 1
-                if length > 12:
+                if length > 5:  # 攒够5条
                     return
-                self.histo.add(href)
+                # self.histo.add(href)  # 目前用不到
                 # file.write(href+'\n')
                 self.q.put((tup[0], tup[1], tup[3]))
                 # print("Put in: ", tup[0])
             except AttributeError:
                 print(tup)
 
-    def loadHistoFromFile(self, fileName='resources/histo.txt'):
+    def loadHistoFromFile(self, fileName='histo.txt'):
         with open(fileName, "r", encoding='utf-8') as file:
             lines = file.readlines()
             for l in lines:
@@ -70,14 +71,14 @@ class NewPostSelector:
         # self.persistHisto(newSet)
         self.histo.update(newSet)
 
-    def persistHisto(self, setToWrite, fileName='resources/histo.txt'):
+    def persistHisto(self, setToWrite, fileName='histo.txt'):
         with open(fileName, "a", encoding='utf-8') as file:
             for href in setToWrite:
                 file.write(str(href) + '\n')
 
     def parseHtml(self, html, xpExp="defaultExp"):
         eles = etree.HTML(html.text).xpath(xpExp)
-        eles = eles[len(eles) - 50:]
+        eles = eles[len(eles) - 50:]  # 筛选50个帖子
         items = []
         for ele in eles:
             li = ele.getchildren()
@@ -95,7 +96,7 @@ class NewPostSelector:
 
 
 if __name__ == '__main__':
-    q = SimpleQueue()
+    q = Queue()
     s = requests.session()
     s.headers.update({
         'Host': 'www.douban.com',
